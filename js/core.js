@@ -1,5 +1,5 @@
 (function(){
-  // Let's get functional
+  // Let's augment some native javascript classes with some useful methods
   Element.prototype.addClass = function(newClass) {
     var classes = this.className.split(" "), comp = {}, reduced = [];
     classes.push(newClass);
@@ -127,7 +127,9 @@
     var _this = this;
     this.maxPlayers = 6;
     this.currentFrame = null;
+    this.currentRoll = null;
     this.currentPlayer = null;
+    this.currentPins = null;
     this.highlighter = null;
     this.rootDiv = window.document.getElementById(div);
     var initialHtml = "<button id='new-button'>Start new game</button><button name='continue'>Continue current game</button>";
@@ -151,6 +153,7 @@
     });
   };
   Bowl.prototype.resetGame = function() {
+    var _this = this;
     // Get the players from the form
     var position = 0;
     for ( var i = 0; i < this.maxPlayers; i++ ) {
@@ -164,8 +167,11 @@
       alert('Please enter at least one player!');
       return;
     }
-    var html = this.createScoreTableHtml();
+    var html = this.createScoreTableHtml() + this.createMenu() + this.createBowlingAlley();
     this.rootDiv.innerHTML = html;
+    document.getElementById('bowl-button').addEventListener('click', function(event) {
+      _this.throwBall();
+    });
     this.beginGame();
   };
   Bowl.prototype.initPlayer = function(name, position) {
@@ -185,24 +191,42 @@
     for ( var i in this.player ) {
       scoreTableHtml += '<tr class="player"><td class="playerName">' + this.player[i].name + '</td>';
       for ( var j = 0; j < 10; j++ ) {
-        scoreTableHtml += '<td class="box frame_' + j + '" id="player_' + i + '_' + j + '"><div class="rolls cf"><div class="roll_0"></div><div class="roll_1"></div>';
-        if ( j === 9 ) scoreTableHtml += '<div class="roll_2"></div>';
-        scoreTableHtml += '</div><div class="score"></div></td>';
+        var id = i.toString() + '_' + j.toString();
+        scoreTableHtml += '<td class="box frame_' + j + '" id="player_' + id + '"><div class="rolls cf"><div class="roll_0" id="roll_' + id + '_0"></div><div class="roll_1" id="roll_' + id + '_1"></div>';
+        if ( j === 9 ) scoreTableHtml += '<div class="roll_2" id="roll_' + id + '_2"></div>';
+        scoreTableHtml += '</div><div class="score" id="score_' + id + '"></div></td>';
       }
       scoreTableHtml += '</tr>';
     }
     scoreTableHtml += '</table>';
     return scoreTableHtml;
   };
+  Bowl.prototype.createBowlingAlley = function() {
+    var html = '<div id="alley" class="alley"><div class="gutter top"></div><div class="lane"><div class="ball static"></div><div class="pins">';
+    for ( var i = 0; i < 10; i++ ) {
+      html += '<div id="pin_' + i.toString() + '" class="pin pin_' + i.toString() + '"></div>';
+    }
+    html += '</div></div><div class="gutter bottom"></div></div>';
+    return html;
+  };
+  Bowl.prototype.createMenu = function() {
+    var html = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
+    return html;
+  };
   Bowl.prototype.beginGame = function() {
     this.currentFrame = 0;
+    this.currentRoll = 0;
     this.currentPlayer = 0;
+    this.currentPins = 10;
     this.highlightBox();
+  };
+  Bowl.prototype.getCurrentFrameBox = function() {
+    return document.getElementById('player_' + this.currentPlayer + '_' + this.currentFrame);
   };
   Bowl.prototype.highlightBox = function() {
     var _this = this;
     this.highlighter = setInterval(function(){
-      var frameBox = document.getElementById('player_' + _this.currentPlayer + '_' + _this.currentFrame);
+      var frameBox = _this.getCurrentFrameBox();
       if ( frameBox.containsClass('highlight') ) {
         frameBox.removeClass("highlight");
       } else {
@@ -210,7 +234,62 @@
       }
     }, 1250);
   };
-
+  Bowl.prototype.throwBall = function() {
+    // For now just do random numbers
+    var pins = Math.floor(Math.random() * (this.currentPins + 1));
+    this.currentPins -= pins;
+    this.recordScore(pins);
+    if ( pins === 10 || this.currentRoll === 1 ) {
+      this.nextPlayer();
+    } else {
+      this.currentRoll++;
+    } 
+  };
+  Bowl.prototype.nextPlayer = function() {
+    window.clearInterval(this.highlighter);
+    this.getCurrentFrameBox().removeClass("highlight");
+    this.recordFrames();
+    this.currentPlayer++;
+    this.currentRoll = 0;
+    this.currentPins = 10;
+    if ( this.currentPlayer === this.player.length ) {
+      this.currentPlayer = 0;
+      this.currentFrame++;
+    }
+    this.highlightBox();
+  };
+  Bowl.prototype.recordScore = function(pins) {
+    this.player[this.currentPlayer].markScore(this.currentFrame, this.currentRoll, pins);
+    var rollBox0 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_0');
+    var rollBox1 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_1');
+    var rollBox2 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_2');
+    if ( this.currentRoll === 0 ) {
+      if ( pins === 10 ) {
+        rollBox1.innerHTML = "X";
+      } else {
+        rollBox0.innerHTML = pins;
+      }
+    } else if ( this.currentRoll === 1 ) {
+      if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.SPARE ) {
+        rollBox1.innerHTML = "/";
+      } else {
+        rollBox1.innerHTML = pins;
+      }
+    } else {
+    }
+  };
+  Bowl.prototype.recordFrames = function() {
+    var scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + this.currentFrame);
+    var score = 0, totalScore = 0;
+    // Now go through each frame and see if we can record a total score
+    for ( var i in this.player[this.currentPlayer].frameSet ) {
+      score = this.player[this.currentPlayer].frameSet[i].getScore();
+      if ( score !== null ) {
+        totalScore += score;
+        scoreBox.innerHTML = totalScore;
+      }
+    }
+  };
 
   // create our global access variable
   if ( typeof window.Bowl === 'undefined' ) {

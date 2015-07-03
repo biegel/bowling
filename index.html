@@ -5,7 +5,7 @@
     <script type="text/javascript" src="js/core.js"></script>
     <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function(event) {
-      var Game = new Bowl('bowl');
+      window.Game = new Bowl('bowl');
     });
     </script>
     <style type="text/css">
@@ -37,6 +37,8 @@
     }
     .scoreTable td .rolls {
       height: 25px;
+      text-align: center;
+      line-height: 25px;
     }
     .scoreTable td .rolls .roll_0 {
       width: 30px;
@@ -62,6 +64,94 @@
     .scoreTable td .score {
       height: 35px;
       text-align: center;
+      line-height: 35px;
+      font-size: 22px;
+    }
+    .alley {
+      width: 700px;
+      height: 100px;
+    }
+    .alley .gutter {
+      height: 25px;
+      border-style: solid;
+      border-color: #b59000;
+      border-width: 1px 1px 1px 0;
+      background-color: #716229;
+    }
+    .alley .lane {
+      position: relative;
+      height: 120px;
+      background-color: #ffea96;
+      border-style: solid;
+      border-color: #b59000;
+      border-width: 0 1px 0 0;
+    }
+    .alley .ball {
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      background-color: #000;
+      position: absolute;
+    }
+    .alley .ball.static {
+      top: 45px;
+      left: 10px;
+    }
+    .alley .pin {
+      width: 20px;
+      height: 20px;
+      border-width: 1px;
+      border-color: #333;
+      border-style: solid;
+      border-radius: 50%;
+      background-color: #fff;
+      position: absolute;
+    }
+    .alley .pins {
+      position: absolute;
+      top: 5px;
+      right: 0;
+      width: 110px;
+      height: 110px;
+    }
+    .alley .pin_0 {
+      top: 45px;
+    }
+    .alley .pin_1 {
+      top: 30px;
+      left: 20px;
+    }
+    .alley .pin_2 {
+      top: 60px;
+      left: 20px;
+    }
+    .alley .pin_3 {
+      top: 15px;
+      left: 40px;
+    }
+    .alley .pin_4 {
+      top: 45px;
+      left: 40px;
+    }
+    .alley .pin_5 {
+      top: 75px;
+      left: 40px;
+    }
+    .alley .pin_6 {
+      top: 0px;
+      left: 60px;
+    }
+    .alley .pin_7 {
+      top: 30px;
+      left: 60px;
+    }
+    .alley .pin_8 {
+      top: 60px;
+      left: 60px;
+    }
+    .alley .pin_9 {
+      top: 90px;
+      left: 60px;
     }
     </style>
   </head>
