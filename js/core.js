@@ -1,4 +1,37 @@
 (function(){
+  // Let's get functional
+  Element.prototype.addClass = function(newClass) {
+    var classes = this.className.split(" "), comp = {}, reduced = [];
+    classes.push(newClass);
+    for ( var i in classes ) {
+      if ( comp[classes[i]] === undefined ) {
+        comp[classes[i]] = true;
+        reduced.push(classes[i]);
+      }
+    }
+    this.className = reduced.join(" ");
+    return this;
+  }
+  Element.prototype.removeClass = function(oldClass) {
+    var classes = this.className.split(" "), reduced = [];
+    for ( var i in classes ) {
+      if ( classes[i] !== oldClass ) {
+        reduced.push(classes[i]);
+      }
+    }
+    this.className = reduced.join(" ");
+    return this;
+  }
+  Element.prototype.containsClass = function(checkClass) {
+    var classes = this.className.split(" ");
+    for ( var i in classes ) {
+      if ( classes[i] === checkClass ) {
+        return true;
+      }
+    }
+    return false;
+  }
+    
   // wrapper for making simple ajax requests
   // create a simple cookie storage and parsing method for saving scores
 
@@ -93,6 +126,9 @@
   function Bowl(div) {
     var _this = this;
     this.maxPlayers = 6;
+    this.currentFrame = null;
+    this.currentPlayer = null;
+    this.highlighter = null;
     this.rootDiv = window.document.getElementById(div);
     var initialHtml = "<button id='new-button'>Start new game</button><button name='continue'>Continue current game</button>";
     this.rootDiv.innerHTML = initialHtml;
@@ -130,6 +166,7 @@
     }
     var html = this.createScoreTableHtml();
     this.rootDiv.innerHTML = html;
+    this.beginGame();
   };
   Bowl.prototype.initPlayer = function(name, position) {
     if ( typeof this.player[position] !== 'undefined' ) {
@@ -148,12 +185,30 @@
     for ( var i in this.player ) {
       scoreTableHtml += '<tr class="player"><td class="playerName">' + this.player[i].name + '</td>';
       for ( var j = 0; j < 10; j++ ) {
-        scoreTableHtml += '<td class="box"><div class="rolls"><div class="roll_0"></div><div class="roll_1"></div></div><div class="score"></div></td>';
+        scoreTableHtml += '<td class="box frame_' + j + '" id="player_' + i + '_' + j + '"><div class="rolls cf"><div class="roll_0"></div><div class="roll_1"></div>';
+        if ( j === 9 ) scoreTableHtml += '<div class="roll_2"></div>';
+        scoreTableHtml += '</div><div class="score"></div></td>';
       }
       scoreTableHtml += '</tr>';
     }
     scoreTableHtml += '</table>';
     return scoreTableHtml;
+  };
+  Bowl.prototype.beginGame = function() {
+    this.currentFrame = 0;
+    this.currentPlayer = 0;
+    this.highlightBox();
+  };
+  Bowl.prototype.highlightBox = function() {
+    var _this = this;
+    this.highlighter = setInterval(function(){
+      var frameBox = document.getElementById('player_' + _this.currentPlayer + '_' + _this.currentFrame);
+      if ( frameBox.containsClass('highlight') ) {
+        frameBox.removeClass("highlight");
+      } else {
+        frameBox.addClass('highlight');
+      }
+    }, 1250);
   };
 
 

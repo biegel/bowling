@@ -9,15 +9,59 @@
     });
     </script>
     <style type="text/css">
+    /* Based on Paul Irish's recommendations */
+    html {
+      box-sizing: border-box;
+      font-family: Helvetica, Arial, sans-serif;
+    }
+    *, *:before, *:after {
+      box-sizing: inherit;
+    }
+    .cf:after {
+      content: "";
+      display: table;
+      clear: both;
+    }
     .scoreTable {
       border: solid 1px #666;
+      border-spacing: 0;
+      border-collapse: collapse;
     }
     .scoreTable th, .scoreTable td {
       border: solid 1px #999;
+      padding: 0;
+      margin: 0;
     }
-    .scoreTable td {
-      width: 50px;
-      height: 50px;
+    .scoreTable .playerName {
+      padding: 2px;
+    }
+    .scoreTable td .rolls {
+      height: 25px;
+    }
+    .scoreTable td .rolls .roll_0 {
+      width: 30px;
+      height: 25px;
+      float: left;
+    }
+    .scoreTable td .rolls .roll_1, .scoreTable td .rolls .roll_2 {
+      width: 30px;
+      height: 25px;
+      float: left;
+      border-style: solid;
+      border-color: #999;
+      border-width: 0 0 1px 1px;
+    }
+    .scoreTable td.frame_9 .rolls .roll_0 {
+      border-style: solid;
+      border-color: #999;
+      border-width: 0 0 1px 0;
+    }
+    .scoreTable td.highlight {
+      background-color: #ff0;
+    }
+    .scoreTable td .score {
+      height: 35px;
+      text-align: center;
     }
     </style>
   </head>
