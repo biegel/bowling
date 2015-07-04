@@ -80,11 +80,7 @@
           this.frameStatus = Frame.ACTIVE;
         }
       } else if ( roll === 1 ) {
-        if ( this.frameStatus === Frame.STRIKE_EXTRA ) {
-          if ( pins === 10 ) {
-            this.frameStatus = Frame.DOUBLE_STRIKE_EXTRA;
-          }
-        } else {
+        if ( this.frameStatus !== Frame.STRIKE_EXTRA ) {
           if ( pins + this.roll[0] === 10 ) {
             this.frameStatus = Frame.SPARE_EXTRA;
           } else {
@@ -110,50 +106,47 @@
     this.calculateScore();
   };
   Frame.prototype.calculateScore = function() {
+    // We score based on frame status (see below)
     var oneAhead = this.set[this.position + 1], twoAhead = this.set[this.position + 2];
     if ( this.frameStatus === Frame.SCORED ) {
       this.score = this.roll[0] + this.roll[1];
     } else if ( this.frameStatus === Frame.SPARE ) {
       // We can only score a spare if the next roll is scored
-      if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null ) {
-        this.score = oneAhead.score + 10;
-      } else if ( oneAhead.score !== null ) {
+      if ( oneAhead.roll[0] !== null ) {
         this.score = oneAhead.roll[0] + 10;
       }
     } else if ( this.frameStatus === Frame.STRIKE ) {
-      if ( oneAhead.frameStatus === Frame.DOUBLE_STRIKE_EXTRA ) {
-        this.score = 30;
-      } else if ( oneAhead.frameStatus === Frame.STRIKE_EXTRA && oneAhead.roll[2] !== null ) {
-        this.score = (oneAhead.roll[1] + oneAhead.roll[2] + 10) + oneAhead.roll[1] + 10;
-      } else if ( oneAhead.frameStatus === Frame.SPARE_EXTRA && oneAhead.roll[2] !== null ) {
-        this.score = (oneAhead.roll[1] + oneAhead.roll[2] + 10) + oneAhead.roll[1] + 10;
+      // If we have a strike on the 9th frame, we have to score it
+      // differently since there's only 1 frame ahead
+      if ( oneAhead.position === 9 ) {
+        if ( oneAhead.roll[0] !== null && oneAhead.roll[1] !== null ) {
+          this.score = oneAhead.roll[0] + oneAhead.roll[1] + 10;
+        }
       } else {
-        if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null && twoAhead.frameStatus === Frame.STRIKE && twoAhead.score !== null ) {
-          this.score = oneAhead.score + twoAhead.score + 10;
-        } else if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null && twoAhead.frameStatus === Frame.ACTIVE ) {
-          this.score = oneAhead.score + twoAhead.roll[0] + 10;
-        } else if ( oneAhead.score !== null ) {
-          this.score = oneAhead.score + 10;
+        if ( oneAhead.frameStatus === Frame.STRIKE ) {
+          if ( oneAhead.roll[0] !== null && twoAhead.roll[0] !== null ) {
+            this.score = oneAhead.roll[0] + twoAhead.roll[0] + 10;
+          }
+        } else if ( oneAhead.roll[1] !== null ) {
+          this.score = oneAhead.roll[0] + oneAhead.roll[1] + 10;
         }
       }
-    } else if ( this.frameStatus === Frame.DOUBLE_STRIKE_EXTRA && this.roll[2] !== null ) {
-      this.score = this.roll[2] + (this.roll[2] + 10) + (this.roll[2] + (this.roll[2] + 10) + 10);
     } else if ( this.frameStatus === Frame.STRIKE_EXTRA && this.roll[2] !== null ) {
-      this.score = (this.roll[1] + this.roll[2])*2 + 10;
+      this.score = this.roll[1] + this.roll[2] + 10;
     } else if ( this.frameStatus === Frame.SPARE_EXTRA && this.roll[2] !== null ) {
-      this.score = 10 + this.roll[2]*2;
+      this.score = this.roll[2] + 10 + this.roll[0] + this.roll[1];
     }
+    return this.score;
   };
 
-  Frame.UNPLAYED = 0;
-  Frame.ACTIVE = 1;
-  Frame.SCORED = 2;
-  Frame.SPARE = 3;
-  Frame.STRIKE = 4;
+  Frame.UNPLAYED = 0;    // player has not yet thrown a ball in this frame
+  Frame.ACTIVE = 1;      // player has thrown the first roll only
+  Frame.SCORED = 2;      // player has thrown both rolls, and scored a total of less than 10
+  Frame.SPARE = 3;       // player has scored a spare
+  Frame.STRIKE = 4;      // player has score a strike
   // 10th frame states
-  Frame.SPARE_EXTRA = 5;
-  Frame.STRIKE_EXTRA = 6;
-  Frame.DOUBLE_STRIKE_EXTRA = 7;
+  Frame.SPARE_EXTRA = 5; // player has score a spare on the 10th frame
+  Frame.STRIKE_EXTRA = 6;// player has score a strike on the 10th frame
 
   function Bowl(div) {
     var _this = this;
@@ -284,7 +277,7 @@
         }
         this.currentRoll++;
       } else if ( this.currentRoll === 1 ) {
-        if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.STRIKE_EXTRA ) {
+        if ( this.getCurrentPlayer().frameSet[this.currentFrame].frameStatus === Frame.STRIKE_EXTRA ) {
           if ( pins === 10 ) {
             this.currentPins = 10;
           }
@@ -333,8 +326,14 @@
   Bowl.prototype.completeGame = function() {
     console.log('Game over!');
   };
+  Bowl.prototype.getCurrentPlayer = function() {
+    return this.player[this.currentPlayer];
+  };
+  Bowl.prototype.getCurrentFrame = function() {
+    return this.getCurrentPlayer().frameSet[this.currentFrame];
+  };
   Bowl.prototype.recordScore = function(pins) {
-    this.player[this.currentPlayer].markScore(this.currentFrame, this.currentRoll, pins);
+    this.getCurrentPlayer().markScore(this.currentFrame, this.currentRoll, pins);
     var rollBox0 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_0');
     var rollBox1 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_1');
     var rollBox2 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_2');
@@ -348,7 +347,7 @@
       } else if ( this.currentRoll === 1 ) {
         if ( pins === 10 ) {
           rollBox1.innerHTML = "X";
-        } else if ( this.player[this.currentPlayer].frameSet[this.currentFrame].roll[0] + pins === 10 ) {
+        } else if ( this.getCurrentFrame().roll[0] + pins === 10 ) {
           rollBox1.innerHTML = "/";
         } else {
           rollBox1.innerHTML = pins;
@@ -356,7 +355,7 @@
       } else if ( this.currentRoll === 2 ) {
         if ( pins === 10 ) {
           rollBox2.innerHTML = "X";
-        } else if ( this.player[this.currentPlayer].frameSet[this.currentFrame].roll[1] + pins === 10 ) {
+        } else if ( this.getCurrentFrame().roll[1] + pins === 10 ) {
           rollBox2.innerHTML = "/";
         } else {
           rollBox2.innerHTML = pins;
@@ -370,7 +369,7 @@
           rollBox0.innerHTML = pins;
         }
       } else if ( this.currentRoll === 1 ) {
-        if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.SPARE ) {
+        if ( this.getCurrentFrame().frameStatus === Frame.SPARE ) {
           rollBox1.innerHTML = "/";
         } else {
           rollBox1.innerHTML = pins;
@@ -381,32 +380,22 @@
   };
   Bowl.prototype.recordFrames = function() {
     var score = 0, totalScore = 0, scoreBox = undefined, i = 0, prevScore = null;
-    // Now go through each frame and see if we can record a total score
-    while ( i < 10 ) {
-      score = this.player[this.currentPlayer].frameSet[i].score;
+
+    // We start at the current frame and see if we can record a score.
+    // Then, go backwards down the frames to check for any nulls; see if we
+    // can now score them
+    for ( i = this.currentFrame; i >= 0; i-- ) {
+      this.getCurrentPlayer().frameSet[i].calculateScore();
+    }
+
+    // Now go through each frame ascending and calculate the total score
+    for ( i = 0; i < 10; i++ ) {
+      score = this.getCurrentPlayer().frameSet[i].score;
       scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
       if ( score !== null ) {
         totalScore += score;
         console.log(i + ": " + score);
         scoreBox.innerHTML = totalScore;
-        if ( prevScore === null ) {
-          thsi.player[this.currentPlayer].frameSet[i].calculateScore();
-          i = 0;
-        } else {
-          i++;
-          prevScore = score;
-        }
-      } else {
-        i++;
-        prevScore = score;
-      }
-    }
-
-    // We have to backwards now for a strike check
-    for ( var i = 9; i >= 0; i-- ) {
-      score = this.player[this.currentPlayer].frameSet[i].score;
-      scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
-      if ( score !== null ) {
       }
     }
   };
