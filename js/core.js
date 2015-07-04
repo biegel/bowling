@@ -51,11 +51,11 @@
     if ( frame === undefined ) {
       frame = this.currentFrame;
     }
-    return this.frameSet[frame].getScore();
+    return this.frameSet[frame].score;
   };
   Player.prototype.markScore = function(frame, roll, pins) {
     this.frameSet[frame].markScore(roll, pins);
-    return this.frameSet[frame].getScore();
+    return this.frameSet[frame].score;
   };
 
   function Frame(position, set) {
@@ -68,60 +68,92 @@
       this.roll[2] = null;
     }
     this.frameStatus = Frame.UNPLAYED;
+    this.score = null;
   };
   Frame.prototype.markScore = function(roll, pins) {
     this.roll[roll] = pins;
-    if ( roll === 0 ) {
-      if ( pins === 10 ) {
-        this.frameStatus = Frame.STRIKE;
-      } else {
-        this.frameStatus = Frame.ACTIVE;
-      }
-    } else if ( roll === 1 ) {
-      if ( pins + this.roll[0] === 10 ) {
-        this.frameStatus = Frame.SPARE;
-      } else {
-        this.frameStatus = Frame.SCORED;
-      }
-    } else if ( roll === 2 ) {
-      // TODO
-    }
-  };
-  Frame.prototype.getScore = function() {
-    var oneFrameAhead = this.set[this.position + 1], twoFrameAhead = this.set[this.position + 2];
-    if ( this.frameStatus === Frame.UNPLAYED ) {
-      return null;
-    } else if ( this.frameStatus === Frame.ACTIVE ) {
-      return null;
-    } else if ( this.frameStatus === Frame.SCORED ) {
-      return this.roll[0] + this.roll[1];
-    } else if ( this.frameStatus === Frame.SPARE ) {
-      return oneFrameAhead.getScore() + 10;
-    } else if ( this.frameStatus === Frame.STRIKE ) {
-      // See if we have enough information to calculate the score for this frame
-      if ( oneFrameAhead.frameStatus !== Frame.UNPLAYED && oneFrameAhead.frameStatus !== Frame.ACTIVE ) {
-        if ( oneFrameAhead.frameStatus === Frame.STRIKE ) {
-          if ( twoFrameAhead.frameStatus === Frame.STRIKE ) {
-            return oneFrameAhead.getScore() + twoFrameAhead.getScore() + 10;
-          } else if ( twoFrameAhead.frameStatus !== Frame.UNPLAYED ) {
-            return oneFrameAhead.getScore() + twoFrameAhead.roll[0] + 10;
-          } else {
-            return null;
+    if ( this.position === 9 ) {
+      if ( roll === 0 ) {
+        if ( pins === 10 ) {
+          this.frameStatus = Frame.STRIKE_EXTRA;
+        } else {
+          this.frameStatus = Frame.ACTIVE;
+        }
+      } else if ( roll === 1 ) {
+        if ( this.frameStatus === Frame.STRIKE_EXTRA ) {
+          if ( pins === 10 ) {
+            this.frameStatus = Frame.DOUBLE_STRIKE_EXTRA;
           }
         } else {
-          return oneFrameAhead.getScore() + 10;
+          if ( pins + this.roll[0] === 10 ) {
+            this.frameStatus = Frame.SPARE_EXTRA;
+          } else {
+            this.frameStatus = Frame.SCORED;
+          }
         }
-      } else {
-        // Next two rolls are not scorable yet
-        return null;
+      }
+    } else {
+      if ( roll === 0 ) {
+        if ( pins === 10 ) {
+          this.frameStatus = Frame.STRIKE;
+        } else {
+          this.frameStatus = Frame.ACTIVE;
+        }
+      } else if ( roll === 1 ) {
+        if ( pins + this.roll[0] === 10 ) {
+          this.frameStatus = Frame.SPARE;
+        } else {
+          this.frameStatus = Frame.SCORED;
+        }
       }
     }
+    this.calculateScore();
   };
+  Frame.prototype.calculateScore = function() {
+    var oneAhead = this.set[this.position + 1], twoAhead = this.set[this.position + 2];
+    if ( this.frameStatus === Frame.SCORED ) {
+      this.score = this.roll[0] + this.roll[1];
+    } else if ( this.frameStatus === Frame.SPARE ) {
+      // We can only score a spare if the next roll is scored
+      if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null ) {
+        this.score = oneAhead.score + 10;
+      } else if ( oneAhead.score !== null ) {
+        this.score = oneAhead.roll[0] + 10;
+      }
+    } else if ( this.frameStatus === Frame.STRIKE ) {
+      if ( oneAhead.frameStatus === Frame.DOUBLE_STRIKE_EXTRA ) {
+        this.score = 30;
+      } else if ( oneAhead.frameStatus === Frame.STRIKE_EXTRA && oneAhead.roll[2] !== null ) {
+        this.score = (oneAhead.roll[1] + oneAhead.roll[2] + 10) + oneAhead.roll[1] + 10;
+      } else if ( oneAhead.frameStatus === Frame.SPARE_EXTRA && oneAhead.roll[2] !== null ) {
+        this.score = (oneAhead.roll[1] + oneAhead.roll[2] + 10) + oneAhead.roll[1] + 10;
+      } else {
+        if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null && twoAhead.frameStatus === Frame.STRIKE && twoAhead.score !== null ) {
+          this.score = oneAhead.score + twoAhead.score + 10;
+        } else if ( oneAhead.frameStatus === Frame.STRIKE && oneAhead.score !== null && twoAhead.frameStatus === Frame.ACTIVE ) {
+          this.score = oneAhead.score + twoAhead.roll[0] + 10;
+        } else if ( oneAhead.score !== null ) {
+          this.score = oneAhead.score + 10;
+        }
+      }
+    } else if ( this.frameStatus === Frame.DOUBLE_STRIKE_EXTRA && this.roll[2] !== null ) {
+      this.score = this.roll[2] + (this.roll[2] + 10) + (this.roll[2] + (this.roll[2] + 10) + 10);
+    } else if ( this.frameStatus === Frame.STRIKE_EXTRA && this.roll[2] !== null ) {
+      this.score = (this.roll[1] + this.roll[2])*2 + 10;
+    } else if ( this.frameStatus === Frame.SPARE_EXTRA && this.roll[2] !== null ) {
+      this.score = 10 + this.roll[2]*2;
+    }
+  };
+
   Frame.UNPLAYED = 0;
   Frame.ACTIVE = 1;
   Frame.SCORED = 2;
   Frame.SPARE = 3;
   Frame.STRIKE = 4;
+  // 10th frame states
+  Frame.SPARE_EXTRA = 5;
+  Frame.STRIKE_EXTRA = 6;
+  Frame.DOUBLE_STRIKE_EXTRA = 7;
 
   function Bowl(div) {
     var _this = this;
@@ -172,6 +204,9 @@
     document.getElementById('bowl-button').addEventListener('click', function(event) {
       _this.throwBall();
     });
+    document.getElementById('bowl-strike').addEventListener('click', function(event) {
+      _this.throwStrike();
+    });
     this.beginGame();
   };
   Bowl.prototype.initPlayer = function(name, position) {
@@ -210,7 +245,7 @@
     return html;
   };
   Bowl.prototype.createMenu = function() {
-    var html = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
+    var html = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl (Random)</button></li><li><button id="bowl-strike">Bowl Strike</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
     return html;
   };
   Bowl.prototype.beginGame = function() {
@@ -234,21 +269,54 @@
       }
     }, 1250);
   };
-  Bowl.prototype.throwBall = function() {
+  Bowl.prototype.throwBall = function(type) {
     // For now just do random numbers
     var pins = Math.floor(Math.random() * (this.currentPins + 1));
+    if ( type === Frame.SPARE || type === Frame.STRIKE ) {
+      pins = this.currentPins;
+    }
     this.currentPins -= pins;
     this.recordScore(pins);
-    if ( pins === 10 || this.currentRoll === 1 ) {
-      this.nextPlayer();
+    if ( this.currentFrame === 9 ) {
+      if ( this.currentRoll === 0 ) {
+        if ( pins === 10 ) {
+          this.currentPins = 10;
+        }
+        this.currentRoll++;
+      } else if ( this.currentRoll === 1 ) {
+        if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.STRIKE_EXTRA ) {
+          if ( pins === 10 ) {
+            this.currentPins = 10;
+          }
+          this.currentRoll++;
+        } else {
+          if ( this.currentPins === 0 ) {
+            this.currentPins = 10;
+            this.currentRoll++;
+          } else {
+            this.nextPlayer();
+          }
+        }
+      } else {
+        this.nextPlayer();
+      }
     } else {
-      this.currentRoll++;
-    } 
+      if ( pins === 10 || this.currentRoll === 1 ) {
+        this.nextPlayer();
+      } else {
+        this.currentRoll++;
+      } 
+    }
+  };
+  Bowl.prototype.throwStrike = function() {
+    this.throwBall(Frame.STRIKE);
+  };
+  Bowl.prototype.throwSpare = function() {
+    this.throwBall(Frame.SPARE);
   };
   Bowl.prototype.nextPlayer = function() {
     window.clearInterval(this.highlighter);
     this.getCurrentFrameBox().removeClass("highlight");
-    this.recordFrames();
     this.currentPlayer++;
     this.currentRoll = 0;
     this.currentPins = 10;
@@ -256,37 +324,89 @@
       this.currentPlayer = 0;
       this.currentFrame++;
     }
-    this.highlightBox();
+    if ( this.currentFrame === 10 ) {
+      this.completeGame();
+    } else {
+      this.highlightBox();
+    }
+  };
+  Bowl.prototype.completeGame = function() {
+    console.log('Game over!');
   };
   Bowl.prototype.recordScore = function(pins) {
     this.player[this.currentPlayer].markScore(this.currentFrame, this.currentRoll, pins);
     var rollBox0 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_0');
     var rollBox1 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_1');
     var rollBox2 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_2');
-    if ( this.currentRoll === 0 ) {
-      if ( pins === 10 ) {
-        rollBox1.innerHTML = "X";
-      } else {
-        rollBox0.innerHTML = pins;
-      }
-    } else if ( this.currentRoll === 1 ) {
-      if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.SPARE ) {
-        rollBox1.innerHTML = "/";
-      } else {
-        rollBox1.innerHTML = pins;
+    if ( this.currentFrame === 9 ) {
+      if ( this.currentRoll === 0 ) {
+        if ( pins === 10 ) {
+          rollBox0.innerHTML = "X";
+        } else {
+          rollBox0.innerHTML = pins;
+        }
+      } else if ( this.currentRoll === 1 ) {
+        if ( pins === 10 ) {
+          rollBox1.innerHTML = "X";
+        } else if ( this.player[this.currentPlayer].frameSet[this.currentFrame].roll[0] + pins === 10 ) {
+          rollBox1.innerHTML = "/";
+        } else {
+          rollBox1.innerHTML = pins;
+        }
+      } else if ( this.currentRoll === 2 ) {
+        if ( pins === 10 ) {
+          rollBox2.innerHTML = "X";
+        } else if ( this.player[this.currentPlayer].frameSet[this.currentFrame].roll[1] + pins === 10 ) {
+          rollBox2.innerHTML = "/";
+        } else {
+          rollBox2.innerHTML = pins;
+        }
       }
     } else {
+      if ( this.currentRoll === 0 ) {
+        if ( pins === 10 ) {
+          rollBox1.innerHTML = "X";
+        } else {
+          rollBox0.innerHTML = pins;
+        }
+      } else if ( this.currentRoll === 1 ) {
+        if ( this.player[this.currentPlayer].frameSet[this.currentFrame].frameStatus === Frame.SPARE ) {
+          rollBox1.innerHTML = "/";
+        } else {
+          rollBox1.innerHTML = pins;
+        }
+      }
     }
+    this.recordFrames();
   };
   Bowl.prototype.recordFrames = function() {
-    var scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + this.currentFrame);
-    var score = 0, totalScore = 0;
+    var score = 0, totalScore = 0, scoreBox = undefined, i = 0, prevScore = null;
     // Now go through each frame and see if we can record a total score
-    for ( var i in this.player[this.currentPlayer].frameSet ) {
-      score = this.player[this.currentPlayer].frameSet[i].getScore();
+    while ( i < 10 ) {
+      score = this.player[this.currentPlayer].frameSet[i].score;
+      scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
       if ( score !== null ) {
         totalScore += score;
+        console.log(i + ": " + score);
         scoreBox.innerHTML = totalScore;
+        if ( prevScore === null ) {
+          thsi.player[this.currentPlayer].frameSet[i].calculateScore();
+          i = 0;
+        } else {
+          i++;
+          prevScore = score;
+        }
+      } else {
+        i++;
+        prevScore = score;
+      }
+    }
+
+    // We have to backwards now for a strike check
+    for ( var i = 9; i >= 0; i-- ) {
+      score = this.player[this.currentPlayer].frameSet[i].score;
+      scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
+      if ( score !== null ) {
       }
     }
   };
