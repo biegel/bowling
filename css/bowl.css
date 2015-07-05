@@ -126,7 +126,10 @@ button {
   position: absolute;
 }
 .alley .pin.knocked {
-  display: none;
+  transition-property: left;
+  transition-timing-function: linear;
+  transition-duration: 0.5s;
+  left: 600px;
 }
 .alley .pins {
   position: absolute;
