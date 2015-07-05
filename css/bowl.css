@@ -1,0 +1,184 @@
+/* Based on Paul Irish's recommendations */
+html {
+  box-sizing: border-box;
+  font-family: Helvetica, Arial, sans-serif;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+/* simple clearfix */
+.cf:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+ul li {
+  list-style: none;
+}
+button {
+  padding: 5px;
+}
+.players {
+  padding: 0 0 10px 0;
+}
+.scoreTable {
+  border: solid 1px #666;
+  border-spacing: 0;
+  border-collapse: collapse;
+}
+.scoreTable th, .scoreTable td {
+  border: solid 1px #999;
+  margin: 0;
+}
+.scoreTable td {
+  padding: 0;
+}
+.scoreTable th {
+  padding: 5px;
+  background-color: #eee;
+}
+.scoreTable .playerName {
+  padding: 2px;
+  background-color: #e9e9e9;
+}
+.scoreTable td .rolls {
+  height: 25px;
+  text-align: center;
+  line-height: 25px;
+}
+.scoreTable td .rolls .roll_0 {
+  width: 30px;
+  height: 25px;
+  float: left;
+}
+.scoreTable td .rolls .roll_1, .scoreTable td .rolls .roll_2 {
+  width: 30px;
+  height: 25px;
+  float: left;
+  border-style: solid;
+  border-color: #999;
+  border-width: 0 0 1px 1px;
+}
+.scoreTable td.frame_9 .rolls .roll_0 {
+  border-style: solid;
+  border-color: #999;
+  border-width: 0 0 1px 0;
+}
+.scoreTable td.highlight {
+  background-color: #ff0;
+}
+.scoreTable td .score {
+  height: 35px;
+  text-align: center;
+  line-height: 35px;
+  font-size: 22px;
+}
+.menu {
+  padding: 20px 0;
+}
+.alley {
+  width: 700px;
+  height: 100px;
+}
+.alley .gutter {
+  height: 25px;
+  border-style: solid;
+  border-color: #b59000;
+  border-width: 1px 1px 1px 0;
+  background-color: #716229;
+}
+.alley .lane {
+  position: relative;
+  height: 120px;
+  background-color: #ffea96;
+  border-style: solid;
+  border-color: #b59000;
+  border-width: 0 1px 0 0;
+  overflow: hidden;
+}
+.alley .ball {
+  z-index: 10;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  background-color: #000;
+  position: absolute;
+}
+.alley .ball.static {
+  top: 45px;
+  left: 10px;
+}
+.alley .ball.active {
+  transition-property: left;
+  transition-timing-function: linear;
+  left: 700px;
+  top: 45px;
+}
+.alley .pin {
+  z-index: 5;
+  width: 20px;
+  height: 20px;
+  border-width: 1px;
+  border-color: #333;
+  border-style: solid;
+  border-radius: 50%;
+  background-color: #fff;
+  position: absolute;
+}
+.alley .pin.knocked {
+  display: none;
+}
+.alley .pins {
+  position: absolute;
+  top: 5px;
+  right: 0;
+  width: 110px;
+  height: 110px;
+}
+.alley .pin_0 {
+  top: 45px;
+}
+.alley .pin_1 {
+  top: 30px;
+  left: 20px;
+}
+.alley .pin_2 {
+  top: 60px;
+  left: 20px;
+}
+.alley .pin_3 {
+  top: 15px;
+  left: 40px;
+}
+.alley .pin_4 {
+  top: 45px;
+  left: 40px;
+}
+.alley .pin_5 {
+  top: 75px;
+  left: 40px;
+}
+.alley .pin_6 {
+  top: 0px;
+  left: 60px;
+}
+.alley .pin_7 {
+  top: 30px;
+  left: 60px;
+}
+.alley .pin_8 {
+  top: 60px;
+  left: 60px;
+}
+.alley .pin_9 {
+  top: 90px;
+  left: 60px;
+}
+.message {
+  padding: 20px 0;
+}
+.message .winner_list {
+  display: block;
+  padding: 20px;
+  font-size: 18px;
+}

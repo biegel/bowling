@@ -1,59 +1,5 @@
 (function(){
-  // Let's augment some native javascript classes with some useful methods
-  Element.prototype.addClass = function(newClass) {
-    var classes = this.className.split(" "), comp = {}, reduced = [];
-    classes.push(newClass);
-    for ( var i in classes ) {
-      if ( comp[classes[i]] === undefined ) {
-        comp[classes[i]] = true;
-        reduced.push(classes[i]);
-      }
-    }
-    this.className = reduced.join(" ");
-    return this;
-  }
-  Element.prototype.removeClass = function(oldClass) {
-    var classes = this.className.split(" "), reduced = [];
-    for ( var i in classes ) {
-      if ( classes[i] !== oldClass ) {
-        reduced.push(classes[i]);
-      }
-    }
-    this.className = reduced.join(" ");
-    return this;
-  }
-  Element.prototype.containsClass = function(checkClass) {
-    var classes = this.className.split(" ");
-    for ( var i in classes ) {
-      if ( classes[i] === checkClass ) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  Array.prototype.filter = function(boolFunc) {
-    if ( !this.length ) return this;
-    var filtered = [];
-    for ( var i = 0; i < this.length; i++ ) {
-      if ( boolFunc.apply(this, [this[i]]) ) {
-        filtered.push(this[i]);
-      }
-    }
-    return filtered;
-  };
-  Array.prototype.map = function(mapFunc) {
-    var mapped = [];
-    for ( var i = 0; i < this.length; i++ ) {
-      mapped.push(mapFunc(i, this[i]));
-    }
-    return mapped;
-  };
-    
-  // wrapper for making simple ajax requests
-  // create a simple cookie storage and parsing method for saving scores
-
-  // our main classes
+  // Class for a player
   function Player(name) {
     this.name = name;
     this.reset();
@@ -77,6 +23,8 @@
     return this.frameSet[frame].score;
   };
 
+
+  // Class for a frame
   function Frame(position, set) {
     this.position = position;
     this.set = set;
@@ -161,6 +109,7 @@
     return this.score;
   };
 
+  // Constants for possible frame states
   Frame.UNPLAYED = 0;    // player has not yet thrown a ball in this frame
   Frame.ACTIVE = 1;      // player has thrown the first roll only
   Frame.SCORED = 2;      // player has thrown both rolls, and scored a total of less than 10
@@ -171,9 +120,14 @@
   Frame.STRIKE_EXTRA = 6;// player has score a strike on the 10th frame
 
   function Renderer(game, div) {
-    this.game = game;
+    this.game = game;  // reference to the Bowl instance
     this.rootDiv = window.document.getElementById(div);
-    this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
+    this.pinStatus = [1,1,1,1,1,1,1,1,1,1]; // 1 = pin standing, 0 = pin knocked down
+
+    // These are patterns for possible pin strikes.
+    // The keys represent the number of pins knocked down,
+    // and the array sets represent the index of the pins
+    // on the bowling alley.
     this.pinPatterns = {
       1: [
         [6],
@@ -269,8 +223,8 @@
         [0,1,2,3,4,5,6,7,8,9]
       ]
     };
-    this.busy = false;
-    this.dictionary = {};
+    this.busy = false;     // whether an animation is running
+    this.dictionary = {};  // the dictionary for the user's language of choice
   };
   Renderer.prototype.setLanguage = function() {
     var langs = document.getElementsByName('lang');
@@ -281,6 +235,10 @@
     }
     return true;
   };
+
+  // This is a translation method.  It takes a dictionary key
+  // and returns a simple string or a parsed string from the user's
+  // target language dictionary
   Renderer.prototype._ = function(key) {
     var replacements = arguments[1];
     if ( replacements === undefined ) {
@@ -293,6 +251,8 @@
       return template;
     }
   };
+
+  // Renders a game state when the state changes
   Renderer.prototype.renderState = function() {
     switch (this.game.state) {
       case Bowl.WELCOME_SCREEN:
@@ -451,6 +411,50 @@
       _this.knockPins();
     }, 400);
   };
+  Renderer.prototype.recordScore = function(pins) {
+    var rollBox0 = document.getElementById('roll_' + this.game.currentPlayer + '_' + this.game.currentFrame + '_0');
+    var rollBox1 = document.getElementById('roll_' + this.game.currentPlayer + '_' + this.game.currentFrame + '_1');
+    var rollBox2 = document.getElementById('roll_' + this.game.currentPlayer + '_' + this.game.currentFrame + '_2');
+    if ( this.game.currentFrame === 9 ) {
+      if ( this.game.currentRoll === 0 ) {
+        if ( pins === 10 ) {
+          rollBox0.innerHTML = "X";
+        } else {
+          rollBox0.innerHTML = pins;
+        }
+      } else if ( this.game.currentRoll === 1 ) {
+        if ( pins === 10 ) {
+          rollBox1.innerHTML = "X";
+        } else if ( this.game.getCurrentFrame().roll[0] + pins === 10 ) {
+          rollBox1.innerHTML = "/";
+        } else {
+          rollBox1.innerHTML = pins;
+        }
+      } else if ( this.game.currentRoll === 2 ) {
+        if ( pins === 10 ) {
+          rollBox2.innerHTML = "X";
+        } else if ( this.game.getCurrentFrame().roll[1] + pins === 10 ) {
+          rollBox2.innerHTML = "/";
+        } else {
+          rollBox2.innerHTML = pins;
+        }
+      }
+    } else {
+      if ( this.game.currentRoll === 0 ) {
+        if ( pins === 10 ) {
+          rollBox1.innerHTML = "X";
+        } else {
+          rollBox0.innerHTML = pins;
+        }
+      } else if ( this.game.currentRoll === 1 ) {
+        if ( this.game.getCurrentFrame().frameStatus === Frame.SPARE ) {
+          rollBox1.innerHTML = "/";
+        } else {
+          rollBox1.innerHTML = pins;
+        }
+      }
+    }
+  };
   Renderer.prototype.throwBall = function() {
     var _this = this;
     var callback = function() {
@@ -504,7 +508,6 @@
         }
       }
     }
-
     for ( var i in this.pinStatus ) {
       if ( this.pinStatus[i] === 0 ) {
         document.getElementById('pin_' + i).addClass('knocked');
@@ -538,7 +541,7 @@
 
 
 
-
+  // The main game class
   function Bowl(div) {
     var _this = this;
     this.maxPlayers = 6;
@@ -663,48 +666,7 @@
   };
   Bowl.prototype.recordScore = function(pins) {
     this.getCurrentPlayer().markScore(this.currentFrame, this.currentRoll, pins);
-    var rollBox0 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_0');
-    var rollBox1 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_1');
-    var rollBox2 = document.getElementById('roll_' + this.currentPlayer + '_' + this.currentFrame + '_2');
-    if ( this.currentFrame === 9 ) {
-      if ( this.currentRoll === 0 ) {
-        if ( pins === 10 ) {
-          rollBox0.innerHTML = "X";
-        } else {
-          rollBox0.innerHTML = pins;
-        }
-      } else if ( this.currentRoll === 1 ) {
-        if ( pins === 10 ) {
-          rollBox1.innerHTML = "X";
-        } else if ( this.getCurrentFrame().roll[0] + pins === 10 ) {
-          rollBox1.innerHTML = "/";
-        } else {
-          rollBox1.innerHTML = pins;
-        }
-      } else if ( this.currentRoll === 2 ) {
-        if ( pins === 10 ) {
-          rollBox2.innerHTML = "X";
-        } else if ( this.getCurrentFrame().roll[1] + pins === 10 ) {
-          rollBox2.innerHTML = "/";
-        } else {
-          rollBox2.innerHTML = pins;
-        }
-      }
-    } else {
-      if ( this.currentRoll === 0 ) {
-        if ( pins === 10 ) {
-          rollBox1.innerHTML = "X";
-        } else {
-          rollBox0.innerHTML = pins;
-        }
-      } else if ( this.currentRoll === 1 ) {
-        if ( this.getCurrentFrame().frameStatus === Frame.SPARE ) {
-          rollBox1.innerHTML = "/";
-        } else {
-          rollBox1.innerHTML = pins;
-        }
-      }
-    }
+    this.renderer.recordScore(pins);
     this.tallyTotalScore();
   };
   Bowl.prototype.tallyTotalScore = function() {
@@ -729,13 +691,15 @@
     }
   };
 
+  // Game states
   Bowl.WELCOME_SCREEN = 1;
   Bowl.PLAYER_SELECT = 2;
   Bowl.GAME_START = 3;
   Bowl.GAME_ACTIVE = 4;
   Bowl.GAME_OVER = 5;
 
-  // create our global access variable
+  // expose the game class to the global namespace so the demo
+  // page can instantiate a game
   if ( typeof window.Bowl === 'undefined' ) {
     window.Bowl = Bowl;
   }
