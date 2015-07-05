@@ -152,6 +152,8 @@
   function Renderer(game, div) {
     this.game = game;
     this.rootDiv = window.document.getElementById(div);
+    this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
+    this.busy = false;
   };
   Renderer.prototype.renderState = function() {
     switch (this.game.state) {
@@ -172,20 +174,20 @@
     switch (this.game.state) {
       case Bowl.WELCOME_SCREEN:
         document.getElementById('new-button').addEventListener('click', function(event) {
-          _this.game.startNewGame();
+          !_this.busy && _this.game.startNewGame();
         });
         break;
       case Bowl.PLAYER_SELECT:
         document.getElementById('start-game').addEventListener('click', function(event) {
-          _this.game.resetGame();
+          !_this.busy && _this.game.resetGame();
         });
         break;
       case Bowl.GAME_ACTIVE:
         document.getElementById('bowl-button').addEventListener('click', function(event) {
-          _this.throwBall();
+          !_this.busy && _this.throwBall();
         });
         document.getElementById('bowl-strike').addEventListener('click', function(event) {
-          _this.throwStrike();
+          !_this.busy && _this.throwStrike();
         });
         break;
     }
@@ -256,12 +258,15 @@
     document.getElementById('bowl-strike').innerHTML = "Bowl Strike";
   };
   Renderer.prototype.animateBall = function(callback) {
-    document.getElementById('ball').removeClass('static').addClass('active');
-    setTimeout(callback, 1000);
+    var duration = 500;
+    this.busy = true;
+    document.getElementById('ball').removeClass('static').addClass('active').setAttribute("style", "transition-duration: " + duration + "ms");
+    setTimeout(callback, duration);
   };
   Renderer.prototype.throwBall = function() {
     var _this = this;
     var callback = function() {
+      _this.busy = false;
       _this.game.pinStrike();
     };
     this.animateBall(callback);
@@ -269,6 +274,7 @@
   Renderer.prototype.throwStrike = function() {
     var _this = this;
     var callback = function() {
+      _this.busy = false;
       _this.game.pinStrike(Frame.STRIKE);
     };
     this.animateBall(callback);
@@ -285,11 +291,12 @@
     }
   };
   Renderer.prototype.resetBall = function() {
-    document.getElementById('ball').removeClass('active').addClass('static');
+    document.getElementById('ball').removeClass('active').addClass('static').setAttribute("style", "");
   };
   Renderer.prototype.nextThrow = function() {
     this.resetBall();
     document.getElementById('bowl-strike').innerHTML = "Bowl Spare";
+    this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
   };
 
 
@@ -351,6 +358,7 @@
     }
     this.currentPins -= pins;
     this.recordScore(pins);
+    this.renderer.nextThrow();
     if ( this.currentFrame === 9 ) {
       // If this is the last frame, they get extra rolls in certain cases
       if ( this.currentRoll === 0 ) {
@@ -382,7 +390,6 @@
         this.currentRoll++;
       } 
     }
-    this.renderer.nextThrow();
   };
   Bowl.prototype.nextPlayer = function() {
     this.renderer.finishTurn();
