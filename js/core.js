@@ -535,14 +535,14 @@
   Bowl.prototype.tallyTotalScore = function() {
     var score = 0, totalScore = 0, scoreBox = undefined, i = 0, prevScore = null;
 
-    // We start at the current frame and see if we can record a score.
+    // We start at the current frame and see if we can record a score for each frame.
     // Then, go backwards down the frames to check for any nulls; see if we
-    // can now score them
+    // can now score them with the new score data from the current frame.
     for ( i = this.currentFrame; i >= 0; i-- ) {
       this.getCurrentPlayer().frameSet[i].calculateScore();
     }
 
-    // Now go through each frame ascending and calculate the total score
+    // Now go, through each frame ascending and calculate the total score
     for ( i = 0; i < 10; i++ ) {
       score = this.getCurrentPlayer().frameSet[i].score;
       scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
