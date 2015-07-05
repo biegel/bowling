@@ -46,6 +46,7 @@
       this.frameSet[i] = new Frame(i, this.frameSet);
     }
     this.currentFrame = 0;
+    this.totalScore = 0;
   };
   Player.prototype.getScore = function(frame) {
     if ( frame === undefined ) {
@@ -148,76 +149,67 @@
   Frame.SPARE_EXTRA = 5; // player has score a spare on the 10th frame
   Frame.STRIKE_EXTRA = 6;// player has score a strike on the 10th frame
 
-  function Bowl(div) {
-    var _this = this;
-    this.maxPlayers = 6;
-    this.currentFrame = null;
-    this.currentRoll = null;
-    this.currentPlayer = null;
-    this.currentPins = null;
-    this.highlighter = null;
+  function Renderer(game, div) {
+    this.game = game;
     this.rootDiv = window.document.getElementById(div);
+  };
+  Renderer.prototype.renderState = function() {
+    switch (this.game.state) {
+      case Bowl.WELCOME_SCREEN:
+        this.renderWelcomeScreen();
+        break;
+      case Bowl.PLAYER_SELECT:
+        this.renderPlayerSelect();
+        break;
+      case Bowl.GAME_ACTIVE:
+        this.renderGameScreen();
+        break;
+    }
+    this.checkEventListeners();
+  };
+  Renderer.prototype.checkEventListeners = function() {
+    var _this = this;
+    switch (this.game.state) {
+      case Bowl.WELCOME_SCREEN:
+        document.getElementById('new-button').addEventListener('click', function(event) {
+          _this.game.startNewGame();
+        });
+        break;
+      case Bowl.PLAYER_SELECT:
+        document.getElementById('start-game').addEventListener('click', function(event) {
+          _this.game.resetGame();
+        });
+        break;
+      case Bowl.GAME_ACTIVE:
+        document.getElementById('bowl-button').addEventListener('click', function(event) {
+          _this.throwBall();
+        });
+        document.getElementById('bowl-strike').addEventListener('click', function(event) {
+          _this.throwStrike();
+        });
+        break;
+    }
+  };
+  Renderer.prototype.renderWelcomeScreen = function() {
     var initialHtml = "<button id='new-button'>Start new game</button><button name='continue'>Continue current game</button>";
     this.rootDiv.innerHTML = initialHtml;
-    document.getElementById('new-button').addEventListener('click', function(event) {
-      _this.startNewGame();
-    });
   };
-  Bowl.prototype.startNewGame = function() {
-    var _this = this;
-    delete this.player;
-    this.player = [];
-    var html = '<div class="players">Enter the names of up to ' + this.maxPlayers + ' players:</div>';
-    for ( var i = 0; i < this.maxPlayers; i++ ) {
+  Renderer.prototype.renderPlayerSelect = function() {
+    var html = '<div class="players">Enter the names of up to ' + this.game.maxPlayers + ' players:</div>';
+    for ( var i = 0; i < this.game.maxPlayers; i++ ) {
       html += '<div class="player">Player ' + (i+1).toString() + ': <input type="text" id="player_' + i + '"></div>';
     }
     html += '<button id="start-game">Start Game</button>';
     this.rootDiv.innerHTML = html;
-    document.getElementById('start-game').addEventListener('click', function(event) {
-      _this.resetGame();
-    });
   };
-  Bowl.prototype.resetGame = function() {
-    var _this = this;
-    // Get the players from the form
-    var position = 0;
-    for ( var i = 0; i < this.maxPlayers; i++ ) {
-      var name = document.getElementById('player_' + i).value.toString().trim();
-      if ( name !== "" ) {
-        this.initPlayer(name, position);
-        position++;
-      }
-    }
-    if ( this.player.length === 0 ) {
-      alert('Please enter at least one player!');
-      return;
-    }
-    var html = this.createScoreTableHtml() + this.createMenu() + this.createBowlingAlley();
-    this.rootDiv.innerHTML = html;
-    document.getElementById('bowl-button').addEventListener('click', function(event) {
-      _this.throwBall();
-    });
-    document.getElementById('bowl-strike').addEventListener('click', function(event) {
-      _this.throwStrike();
-    });
-    this.beginGame();
-  };
-  Bowl.prototype.initPlayer = function(name, position) {
-    if ( typeof this.player[position] !== 'undefined' ) {
-      this.error('Player ' + position + ' already initialized');
-      return;
-    }
-    this.player[position] = new Player(name);
-    return this.player[position];
-  };
-  Bowl.prototype.createScoreTableHtml = function() {
+  Renderer.prototype.renderGameScreen = function() {
     var scoreTableHtml = '<table class="scoreTable"><tr class="heading"><th rowspan="2">Player</th><th colspan="10">Frames</th></tr><tr>';
     for ( var i = 0; i < 10; i++ ) {
       scoreTableHtml += '<th>' + (i+1).toString() + '</th>';
     }
     scoreTableHtml += '</tr>';
-    for ( var i in this.player ) {
-      scoreTableHtml += '<tr class="player"><td class="playerName">' + this.player[i].name + '</td>';
+    for ( var i in this.game.player ) {
+      scoreTableHtml += '<tr class="player"><td class="playerName">' + this.game.player[i].name + '</td>';
       for ( var j = 0; j < 10; j++ ) {
         var id = i.toString() + '_' + j.toString();
         scoreTableHtml += '<td class="box frame_' + j + '" id="player_' + id + '"><div class="rolls cf"><div class="roll_0" id="roll_' + id + '_0"></div><div class="roll_1" id="roll_' + id + '_1"></div>';
@@ -227,57 +219,147 @@
       scoreTableHtml += '</tr>';
     }
     scoreTableHtml += '</table>';
-    return scoreTableHtml;
-  };
-  Bowl.prototype.createBowlingAlley = function() {
-    var html = '<div id="alley" class="alley"><div class="gutter top"></div><div class="lane"><div class="ball static"></div><div class="pins">';
+
+    var menuHtml = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl (Random)</button></li><li><button id="bowl-strike">Bowl Strike</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
+
+    var alleyHtml = '<div id="alley" class="alley"><div class="gutter top"></div><div class="lane"><div id="ball" class="ball static"></div><div class="pins">';
     for ( var i = 0; i < 10; i++ ) {
-      html += '<div id="pin_' + i.toString() + '" class="pin pin_' + i.toString() + '"></div>';
+      alleyHtml += '<div id="pin_' + i.toString() + '" class="pin pin_' + i.toString() + '"></div>';
     }
-    html += '</div></div><div class="gutter bottom"></div></div>';
-    return html;
+    alleyHtml += '</div></div><div class="gutter bottom"></div></div>';
+    this.rootDiv.innerHTML = scoreTableHtml + menuHtml + alleyHtml;
   };
-  Bowl.prototype.createMenu = function() {
-    var html = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl (Random)</button></li><li><button id="bowl-strike">Bowl Strike</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
-    return html;
-  };
-  Bowl.prototype.beginGame = function() {
-    this.currentFrame = 0;
-    this.currentRoll = 0;
-    this.currentPlayer = 0;
-    this.currentPins = 10;
-    this.highlightBox();
-  };
-  Bowl.prototype.getCurrentFrameBox = function() {
-    return document.getElementById('player_' + this.currentPlayer + '_' + this.currentFrame);
-  };
-  Bowl.prototype.highlightBox = function() {
+  Renderer.prototype.highlightBox = function() {
     var _this = this;
-    this.highlighter = setInterval(function(){
+    var highlight = function() {
       var frameBox = _this.getCurrentFrameBox();
       if ( frameBox.containsClass('highlight') ) {
         frameBox.removeClass("highlight");
       } else {
         frameBox.addClass('highlight');
       }
-    }, 1250);
+    };
+    // Highlight immediately to show movement
+    highlight.call();
+    // setInterval is bad, but is acceptable in this situation...
+    this.highlighter = setInterval(highlight, 1250);
   };
-  Bowl.prototype.throwBall = function(type) {
-    // For now just do random numbers
+  Renderer.prototype.getCurrentFrameBox = function() {
+    return document.getElementById('player_' + this.game.currentPlayer + '_' + this.game.currentFrame);
+  };
+  Renderer.prototype.finishTurn = function() {
+    window.clearInterval(this.highlighter);
+    this.getCurrentFrameBox().removeClass("highlight");
+  };
+  Renderer.prototype.startTurn = function() {
+    this.highlightBox();
+    document.getElementById('bowl-strike').innerHTML = "Bowl Strike";
+  };
+  Renderer.prototype.animateBall = function(callback) {
+    document.getElementById('ball').removeClass('static').addClass('active');
+    setTimeout(callback, 1000);
+  };
+  Renderer.prototype.throwBall = function() {
+    var _this = this;
+    var callback = function() {
+      _this.game.pinStrike();
+    };
+    this.animateBall(callback);
+  };
+  Renderer.prototype.throwStrike = function() {
+    var _this = this;
+    var callback = function() {
+      _this.game.pinStrike(Frame.STRIKE);
+    };
+    this.animateBall(callback);
+  };
+  Renderer.prototype.pinStrike = function(pins) {
+    // In a real bowling game, it's impossible to knock down certain
+    // pins without hitting others. Try to visually simulate something
+    // close to reality.
+    if ( this.game.currentPins === 10 ) {
+      // One pin is likely to be one of the outer pins in the back
+      if ( pins === 1 ) {
+      }
+    } else {
+    }
+  };
+  Renderer.prototype.resetBall = function() {
+    document.getElementById('ball').removeClass('active').addClass('static');
+  };
+  Renderer.prototype.nextThrow = function() {
+    this.resetBall();
+    document.getElementById('bowl-strike').innerHTML = "Bowl Spare";
+  };
+
+
+
+
+
+  function Bowl(div) {
+    var _this = this;
+    this.maxPlayers = 6;
+    this.currentFrame = null;
+    this.currentRoll = null;
+    this.currentPlayer = null;
+    this.currentPins = null;
+    this.highlighter = null;
+    this.renderer = new Renderer(this, div);
+
+    this.state = Bowl.WELCOME_SCREEN;
+    this.renderer.renderState();
+  };
+  Bowl.prototype.startNewGame = function() {
+    delete this.player;
+    this.player = [];
+
+    this.state = Bowl.PLAYER_SELECT;
+    this.renderer.renderState();
+  };
+  Bowl.prototype.resetGame = function() {
+    var _this = this;
+    // Get the players from the form
+    var position = 0;
+    for ( var i = 0; i < this.maxPlayers; i++ ) {
+      var name = document.getElementById('player_' + i).value.toString().trim();
+      if ( name !== "" ) {
+        this.player[position] = new Player(name);
+        position++;
+      }
+    }
+    if ( this.player.length === 0 ) {
+      alert('Please enter at least one player!');
+      return;
+    }
+    this.beginGame();
+  };
+  Bowl.prototype.beginGame = function() {
+    this.currentFrame = 0;
+    this.currentRoll = 0;
+    this.currentPlayer = 0;
+    this.currentPins = 10;
+    this.state = Bowl.GAME_ACTIVE;
+    this.renderer.renderState();
+    this.renderer.startTurn();
+  };
+  Bowl.prototype.pinStrike = function(type) {
+    // Hit a random number of pins
     var pins = Math.floor(Math.random() * (this.currentPins + 1));
+    // Unless we're throwing a strike/spare, then override the random number
     if ( type === Frame.SPARE || type === Frame.STRIKE ) {
       pins = this.currentPins;
     }
     this.currentPins -= pins;
     this.recordScore(pins);
     if ( this.currentFrame === 9 ) {
+      // If this is the last frame, they get extra rolls in certain cases
       if ( this.currentRoll === 0 ) {
         if ( pins === 10 ) {
           this.currentPins = 10;
         }
         this.currentRoll++;
       } else if ( this.currentRoll === 1 ) {
-        if ( this.getCurrentPlayer().frameSet[this.currentFrame].frameStatus === Frame.STRIKE_EXTRA ) {
+        if ( this.getCurrentFrame().frameStatus === Frame.STRIKE_EXTRA ) {
           if ( pins === 10 ) {
             this.currentPins = 10;
           }
@@ -300,16 +382,10 @@
         this.currentRoll++;
       } 
     }
-  };
-  Bowl.prototype.throwStrike = function() {
-    this.throwBall(Frame.STRIKE);
-  };
-  Bowl.prototype.throwSpare = function() {
-    this.throwBall(Frame.SPARE);
+    this.renderer.nextThrow();
   };
   Bowl.prototype.nextPlayer = function() {
-    window.clearInterval(this.highlighter);
-    this.getCurrentFrameBox().removeClass("highlight");
+    this.renderer.finishTurn();
     this.currentPlayer++;
     this.currentRoll = 0;
     this.currentPins = 10;
@@ -318,13 +394,11 @@
       this.currentFrame++;
     }
     if ( this.currentFrame === 10 ) {
-      this.completeGame();
+      this.state = Bowl.GAME_OVER;
+      this.renderer.renderState();
     } else {
-      this.highlightBox();
+      this.renderer.startTurn();
     }
-  };
-  Bowl.prototype.completeGame = function() {
-    console.log('Game over!');
   };
   Bowl.prototype.getCurrentPlayer = function() {
     return this.player[this.currentPlayer];
@@ -376,9 +450,9 @@
         }
       }
     }
-    this.recordFrames();
+    this.tallyTotalScore();
   };
-  Bowl.prototype.recordFrames = function() {
+  Bowl.prototype.tallyTotalScore = function() {
     var score = 0, totalScore = 0, scoreBox = undefined, i = 0, prevScore = null;
 
     // We start at the current frame and see if we can record a score.
@@ -394,11 +468,17 @@
       scoreBox = document.getElementById('score_' + this.currentPlayer + '_' + i);
       if ( score !== null ) {
         totalScore += score;
-        console.log(i + ": " + score);
         scoreBox.innerHTML = totalScore;
+        this.getCurrentPlayer().totalScore = totalScore;
       }
     }
   };
+
+  Bowl.WELCOME_SCREEN = 1;
+  Bowl.PLAYER_SELECT = 2;
+  Bowl.GAME_START = 3;
+  Bowl.GAME_ACTIVE = 4;
+  Bowl.GAME_OVER = 5;
 
   // create our global access variable
   if ( typeof window.Bowl === 'undefined' ) {
