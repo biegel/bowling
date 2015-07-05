@@ -26,6 +26,12 @@
     ul li {
       list-style: none;
     }
+    button {
+      padding: 5px;
+    }
+    .players {
+      padding: 0 0 10px 0;
+    }
     .scoreTable {
       border: solid 1px #666;
       border-spacing: 0;
@@ -33,11 +39,18 @@
     }
     .scoreTable th, .scoreTable td {
       border: solid 1px #999;
-      padding: 0;
       margin: 0;
+    }
+    .scoreTable td {
+      padding: 0;
+    }
+    .scoreTable th {
+      padding: 5px;
+      background-color: #eee;
     }
     .scoreTable .playerName {
       padding: 2px;
+      background-color: #e9e9e9;
     }
     .scoreTable td .rolls {
       height: 25px;
@@ -122,6 +135,9 @@
       border-radius: 50%;
       background-color: #fff;
       position: absolute;
+    }
+    .alley .pin.knocked {
+      display: none;
     }
     .alley .pins {
       position: absolute;

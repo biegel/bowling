@@ -3,6 +3,7 @@
     en: {
       'START_NEW_GAME': 'Start New Game',
       'PLAYER_SELECT_TITLE': 'Enter the names of up to 6 players',
+      'NO_PLAYERS_ENTERED': 'Please enter at least one player!',
       'PLAYER_NUMBER': 'Player %N%',
       'START_GAME': 'Start Game',
       'PLAYER': 'Player',
@@ -22,6 +23,7 @@
     de: {
       'START_NEW_GAME': 'Neues Spiel beginnen',
       'PLAYER_SELECT_TITLE': 'Geben die Namen von bis zu 6 Spieler ein',
+      'NO_PLAYERS_ENTERED': 'Bitte geben Sie mindestens einen Spieler!',
       'PLAYER_NUMBER': 'Spieler %N%',
       'START_GAME': 'Spiel beginnen',
       'PLAYER': 'Spieler/in',
@@ -41,6 +43,7 @@
     fr: {
       'START_NEW_GAME': 'Commencer un nouveau jeu',
       'PLAYER_SELECT_TITLE': 'Veuillez &#233;num&#233;rer les noms de jusqu\'&#224; 10 joueurs',
+      'NO_PLAYERS_ENTERED': 'Veuillez indiquer le nom d\'au moins d\'un joueur!',
       'PLAYER_NUMBER': 'Joueur %N%',
       'START_GAME': 'Commencer &#225; jouer',
       'PLAYER': 'Joueur',

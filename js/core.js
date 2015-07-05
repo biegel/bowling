@@ -31,6 +31,24 @@
     }
     return false;
   }
+
+  Array.prototype.filter = function(boolFunc) {
+    if ( !this.length ) return this;
+    var filtered = [];
+    for ( var i = 0; i < this.length; i++ ) {
+      if ( boolFunc.apply(this, [this[i]]) ) {
+        filtered.push(this[i]);
+      }
+    }
+    return filtered;
+  };
+  Array.prototype.map = function(mapFunc) {
+    var mapped = [];
+    for ( var i = 0; i < this.length; i++ ) {
+      mapped.push(mapFunc(i, this[i]));
+    }
+    return mapped;
+  };
     
   // wrapper for making simple ajax requests
   // create a simple cookie storage and parsing method for saving scores
@@ -156,6 +174,101 @@
     this.game = game;
     this.rootDiv = window.document.getElementById(div);
     this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
+    this.pinPatterns = {
+      1: [
+        [6],
+        [9]
+      ],
+      2: [
+        [3,6],
+        [3,7],
+        [5,8],
+        [5,9],
+        [6,7],
+        [8,9]
+      ],
+      3: [
+        [3,6,7],
+        [3,4,7],
+        [5,8,9],
+        [4,8,9]
+      ],
+      4: [
+        [1,4,5,7],
+        [1,3,6,7],
+        [1,4,7,8],
+        [3,4,6,7],
+        [2,4,5,8],
+        [2,5,8,9],
+        [2,4,7,8],
+        [2,4,8,9],
+        [0,1,3,4],
+        [0,1,2,4],
+        [0,2,5,8],
+        [0,1,3,7]
+      ],
+      5: [
+        [1,3,4,6,7],
+        [1,3,4,7,8],
+        [0,1,2,3,6],
+        [0,1,2,4,7],
+        [0,1,3,4,7],
+        [0,1,4,7,8],
+        [0,1,3,6,7],
+        [0,1,2,4,5],
+        [0,2,4,5,8],
+        [0,2,4,5,9],
+        [0,2,5,8,9],
+        [0,2,4,7,8],
+        [0,1,2,4,8]
+      ],
+      6: [
+        [0,1,2,3,6,7],
+        [0,1,3,4,6,7],
+        [0,1,3,4,7,8],
+        [0,1,2,4,8,9],
+        [0,1,2,4,5,9],
+        [0,1,2,5,8,9],
+        [2,4,5,7,8,9],
+        [1,3,4,6,7,8],
+        [1,3,4,5,7,8],
+        [2,4,5,6,7,8]
+      ],
+      7: [
+        [0,1,2,3,4,5,9],
+        [0,1,2,3,4,5,8],
+        [0,1,2,3,4,5,7],
+        [0,1,2,3,4,7,8],
+        [0,1,2,3,4,6,7],
+        [0,1,2,3,4,8,9],
+        [0,1,2,4,5,7,8],
+        [0,2,4,5,7,8,9],
+        [0,2,3,4,7,8,9],
+        [1,2,3,4,5,8,9],
+        [1,2,3,4,5,6,7],
+        [1,3,4,5,6,7,8],
+        [1,3,4,5,7,8,9]
+      ],
+      8: [
+        [0,1,2,3,4,5,8,9],
+        [0,1,2,3,4,5,7,8], // 7-10 split!
+        [0,1,2,3,4,5,6,7],
+        [0,1,2,4,5,7,8,9],
+        [0,1,2,3,5,7,8,9],
+        [0,1,2,3,4,6,7,8]
+      ],
+      9: [
+        [0,1,2,3,4,5,7,8,9],
+        [0,1,2,3,4,5,6,7,8],
+        [0,1,2,3,4,5,6,8,9],
+        [0,1,2,3,4,5,6,7,9],
+        [0,1,2,3,4,6,7,8,9],
+        [0,1,2,4,5,6,7,8,9]
+      ],
+      10: [
+        [0,1,2,3,4,5,6,7,8,9]
+      ]
+    };
     this.busy = false;
     this.dictionary = {};
   };
@@ -212,10 +325,10 @@
         break;
       case Bowl.GAME_ACTIVE:
         document.getElementById('bowl-button').addEventListener('click', function(event) {
-          !_this.busy && _this.throwBall();
+          !_this.busy && _this.game.determinePins() && _this.throwBall();
         });
         document.getElementById('bowl-strike').addEventListener('click', function(event) {
-          !_this.busy && _this.throwStrike();
+          !_this.busy && _this.game.determinePins(Frame.STRIKE) && _this.throwStrike();
         });
         break;
       case Bowl.GAME_OVER:
@@ -236,11 +349,11 @@
     this.rootDiv.innerHTML = initialHtml;
   };
   Renderer.prototype.renderPlayerSelect = function() {
-    var html = '<div class="players">' + this._('PLAYER_SELECT_TITLE', {'N': this.game.maxPlayers}) + ':</div>';
+    var html = '<div class="players">' + this._('PLAYER_SELECT_TITLE', {'N': this.game.maxPlayers}) + ':</div><ul>';
     for ( var i = 0; i < this.game.maxPlayers; i++ ) {
-      html += '<div class="player">' + this._('PLAYER_NUMBER', {'N': (i+1).toString()}) + ': <input type="text" id="player_' + i + '"></div>';
+      html += '<li class="player">' + this._('PLAYER_NUMBER', {'N': (i+1).toString()}) + ': <input type="text" id="player_' + i + '" maxlength="15"></li>';
     }
-    html += '<button id="start-game">' + this._('START_GAME') + '</button>';
+    html += '</ul><button id="start-game">' + this._('START_GAME') + '</button>';
     this.rootDiv.innerHTML = html;
   };
   Renderer.prototype.renderGameScreen = function() {
@@ -278,7 +391,6 @@
         highScore = this.game.player[i].totalScore;
       }
     }
-    console.log(highScore);
 
     // Now determine the winners
     var winners = [];
@@ -290,8 +402,6 @@
 
     var winnerMessageKey = winners.length > 1 ? 'WINNER_MESSAGE_TIE' : 'WINNER_MESSAGE';
     var winnerText = winners.length > 1 ? winners.join(" " + this._('AND') + " ") : winners.pop();
-    console.log(winnerText);
-    console.log(winners);
     var winnerHtml = '<div class="winner"><div class="message">' + this._(winnerMessageKey) + '<span class="winner_list">' + winnerText + '</span>' + this._('PLAY_AGAIN') + '</div><ul><li><button id="same-players">' + this._('SAME_PLAYERS') + '</button></li><li><button id="new-players">' + this._('NEW_PLAYERS') + '</button></li><li><button id="finished">' + this._('FINISHED') + '</button></li></ul>';
     document.getElementById('below-score').innerHTML = winnerHtml;
   };
@@ -318,14 +428,28 @@
     this.getCurrentFrameBox().removeClass("highlight");
   };
   Renderer.prototype.startTurn = function() {
+    this.busy = false;
     this.highlightBox();
+    this.resetPins();
+    document.getElementById('bowl-strike').innerHTML = this._('BOWL_STRIKE');
+  };
+  Renderer.prototype.resetPins = function() {
+    this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
+    for ( var i = 0; i < this.pinStatus.length; i++ ) {
+      document.getElementById('pin_' + i).removeClass('knocked');
+    }
     document.getElementById('bowl-strike').innerHTML = this._('BOWL_STRIKE');
   };
   Renderer.prototype.animateBall = function(callback) {
-    var duration = 500;
+    var duration = 500, _this = this;
     this.busy = true;
     document.getElementById('ball').removeClass('static').addClass('active').setAttribute("style", "transition-duration: " + duration + "ms");
     setTimeout(callback, duration);
+
+    // Set the pin strike timeouts
+    setTimeout(function(){
+      _this.knockPins();
+    }, 400);
   };
   Renderer.prototype.throwBall = function() {
     var _this = this;
@@ -339,19 +463,52 @@
     var _this = this;
     var callback = function() {
       _this.busy = false;
-      _this.game.pinStrike(Frame.STRIKE);
+      _this.game.pinStrike();
     };
     this.animateBall(callback);
   };
-  Renderer.prototype.pinStrike = function(pins) {
-    // In a real bowling game, it's impossible to knock down certain
-    // pins without hitting others. Try to visually simulate something
-    // close to reality.
-    if ( this.game.currentPins === 10 ) {
-      // One pin is likely to be one of the outer pins in the back
-      if ( pins === 1 ) {
+  Renderer.prototype.knockPins = function() {
+    var pins = this.game.currentPinStrike
+    // In a real bowling game, it's very hard to knock down certain
+    // pins without hitting others when all 10 pins are standing.
+    // Try to visually simulate something close to reality based on some common
+    // strike patterns seen in normal bowling games.
+    if ( pins > 0 ) {
+      if ( this.game.currentPins === 10 ) {
+        // Choose from one of the likely standard pinstrike patterns
+        var index = Math.floor(Math.random() * this.pinPatterns[pins].length);
+        var pattern = this.pinPatterns[pins][index];
+        for ( var i = 0; i < pattern.length; i++ ) {
+          this.pinStatus[pattern[i]] = 0;
+        }
+      } else {
+        // On your second throw, we just randomly select pins to knock down, as
+        // this is closer to how a real game might work in reality.
+        var nextStatus = this.pinStatus.map(function(key, value) {
+          if ( value === 1 ) {
+            return key;
+          } else {
+            return null;
+          }
+        }).filter(function(){
+          return arguments[0] !== null;
+        });
+        var pinsStanding = nextStatus.length;
+        for ( var i = 0; i < pinsStanding - pins; i++ ) {
+          var index = Math.floor(Math.random() * nextStatus.length);
+          nextStatus.splice(index, 1);
+        }
+        while ( nextStatus.length ) {
+          var index = nextStatus.pop();
+          this.pinStatus[index] = 0;
+        }
       }
-    } else {
+    }
+
+    for ( var i in this.pinStatus ) {
+      if ( this.pinStatus[i] === 0 ) {
+        document.getElementById('pin_' + i).addClass('knocked');
+      }
     }
   };
   Renderer.prototype.resetBall = function() {
@@ -360,13 +517,22 @@
   Renderer.prototype.nextThrow = function() {
     this.resetBall();
     document.getElementById('bowl-strike').innerHTML = this._('BOWL_SPARE');
-    this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
   };
   Renderer.prototype.resetSamePlayers = function() {
     this.game.beginGame();
   };
   Renderer.prototype.resetNewPlayers = function() {
     this.game.startNewGame();
+  };
+  Renderer.prototype.playerCountError = function() {
+    alert(this._('NO_PLAYERS_ENTERED'));
+  };
+  Renderer.prototype.nextPlayer = function() {
+    var _this = this;
+    this.busy = true;
+    setTimeout(function() {
+      _this.startTurn();
+    }, 500);
   };
 
 
@@ -405,7 +571,7 @@
       }
     }
     if ( this.player.length === 0 ) {
-      alert('Please enter at least one player!');
+      this.renderer.playerCountError();
       return;
     }
     this.beginGame();
@@ -418,36 +584,44 @@
     this.currentRoll = 0;
     this.currentPlayer = 0;
     this.currentPins = 10;
+    this.currentPinStrike = null;
     this.state = Bowl.GAME_ACTIVE;
     this.renderer.renderState();
     this.renderer.startTurn();
   };
-  Bowl.prototype.pinStrike = function(type) {
+  Bowl.prototype.determinePins = function(type) {
     // Hit a random number of pins
     var pins = Math.floor(Math.random() * (this.currentPins + 1));
     // Unless we're throwing a strike/spare, then override the random number
     if ( type === Frame.SPARE || type === Frame.STRIKE ) {
       pins = this.currentPins;
     }
-    this.currentPins -= pins;
-    this.recordScore(pins);
+    this.currentPinStrike = pins;
+    return true;
+  };
+  Bowl.prototype.pinStrike = function() {
+    this.currentPins -= this.currentPinStrike;
+    this.recordScore(this.currentPinStrike);
     this.renderer.nextThrow();
     if ( this.currentFrame === 9 ) {
       // If this is the last frame, they get extra rolls in certain cases
       if ( this.currentRoll === 0 ) {
-        if ( pins === 10 ) {
+        if ( this.currentPinStrike === 10 ) {
           this.currentPins = 10;
+          this.renderer.resetPins();
         }
         this.currentRoll++;
       } else if ( this.currentRoll === 1 ) {
         if ( this.getCurrentFrame().frameStatus === Frame.STRIKE_EXTRA ) {
-          if ( pins === 10 ) {
+          if ( this.currentPinStrike === 10 ) {
             this.currentPins = 10;
+            this.renderer.resetPins();
           }
           this.currentRoll++;
         } else {
           if ( this.currentPins === 0 ) {
             this.currentPins = 10;
+            this.renderer.resetPins();
             this.currentRoll++;
           } else {
             this.nextPlayer();
@@ -457,7 +631,7 @@
         this.nextPlayer();
       }
     } else {
-      if ( pins === 10 || this.currentRoll === 1 ) {
+      if ( this.currentPinStrike === 10 || this.currentRoll === 1 ) {
         this.nextPlayer();
       } else {
         this.currentRoll++;
@@ -469,6 +643,7 @@
     this.currentPlayer++;
     this.currentRoll = 0;
     this.currentPins = 10;
+    this.currentPinStrike = null;
     if ( this.currentPlayer === this.player.length ) {
       this.currentPlayer = 0;
       this.currentFrame++;
@@ -477,7 +652,7 @@
       this.state = Bowl.GAME_OVER;
       this.renderer.renderState();
     } else {
-      this.renderer.startTurn();
+      this.renderer.nextPlayer();
     }
   };
   Bowl.prototype.getCurrentPlayer = function() {
