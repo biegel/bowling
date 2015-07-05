@@ -62,6 +62,9 @@
   function Frame(position, set) {
     this.position = position;
     this.set = set;
+    this.reset();
+  };
+  Frame.prototype.reset = function() {
     this.roll = [];
     this.roll[0] = null;
     this.roll[1] = null;
@@ -154,6 +157,28 @@
     this.rootDiv = window.document.getElementById(div);
     this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
     this.busy = false;
+    this.dictionary = {};
+  };
+  Renderer.prototype.setLanguage = function() {
+    var langs = document.getElementsByName('lang');
+    for ( var i in langs ) {
+      if ( langs[i].checked ) {
+        this.dictionary = window.dictionary[langs[i].value];
+      }
+    }
+    return true;
+  };
+  Renderer.prototype._ = function(key) {
+    var replacements = arguments[1];
+    if ( replacements === undefined ) {
+      return this.dictionary[key];
+    } else {
+      var template = this.dictionary[key];
+      for ( var i in replacements ) {
+        template = template.replace('%' + i + '%', replacements[i]);
+      }
+      return template;
+    }
   };
   Renderer.prototype.renderState = function() {
     switch (this.game.state) {
@@ -166,6 +191,9 @@
       case Bowl.GAME_ACTIVE:
         this.renderGameScreen();
         break;
+      case Bowl.GAME_OVER:
+        this.renderEndScreen();
+        break;
     }
     this.checkEventListeners();
   };
@@ -174,12 +202,12 @@
     switch (this.game.state) {
       case Bowl.WELCOME_SCREEN:
         document.getElementById('new-button').addEventListener('click', function(event) {
-          !_this.busy && _this.game.startNewGame();
+          !_this.busy && _this.setLanguage() && _this.game.startNewGame();
         });
         break;
       case Bowl.PLAYER_SELECT:
         document.getElementById('start-game').addEventListener('click', function(event) {
-          !_this.busy && _this.game.resetGame();
+          !_this.busy && _this.game.setPlayers();
         });
         break;
       case Bowl.GAME_ACTIVE:
@@ -190,22 +218,33 @@
           !_this.busy && _this.throwStrike();
         });
         break;
+      case Bowl.GAME_OVER:
+        document.getElementById('same-players').addEventListener('click', function(event) {
+          !_this.busy && _this.resetSamePlayers();
+        });
+        document.getElementById('new-players').addEventListener('click', function(event) {
+          !_this.busy && _this.resetNewPlayers();
+        });
+        document.getElementById('finished').addEventListener('click', function(event) {
+          document.location.href = 'http://babbel.com';
+        });
+        break;
     }
   };
   Renderer.prototype.renderWelcomeScreen = function() {
-    var initialHtml = "<button id='new-button'>Start new game</button><button name='continue'>Continue current game</button>";
+    var initialHtml = 'Choose your language:<ul><li><input type="radio" name="lang" value="en" checked="checked" id="lang_en"><label for="lang_en">English</label></li><li><input type="radio" name="lang" value="de" id="lang_de"><label for="lang_de">Deutsch</label></li><li><input type="radio" name="lang" value="fr"><label for="lang_fr">Fran&#231;ais</label></li></ul><button id="new-button">Start new game</button>';
     this.rootDiv.innerHTML = initialHtml;
   };
   Renderer.prototype.renderPlayerSelect = function() {
-    var html = '<div class="players">Enter the names of up to ' + this.game.maxPlayers + ' players:</div>';
+    var html = '<div class="players">' + this._('PLAYER_SELECT_TITLE', {'N': this.game.maxPlayers}) + ':</div>';
     for ( var i = 0; i < this.game.maxPlayers; i++ ) {
-      html += '<div class="player">Player ' + (i+1).toString() + ': <input type="text" id="player_' + i + '"></div>';
+      html += '<div class="player">' + this._('PLAYER_NUMBER', {'N': (i+1).toString()}) + ': <input type="text" id="player_' + i + '"></div>';
     }
-    html += '<button id="start-game">Start Game</button>';
+    html += '<button id="start-game">' + this._('START_GAME') + '</button>';
     this.rootDiv.innerHTML = html;
   };
   Renderer.prototype.renderGameScreen = function() {
-    var scoreTableHtml = '<table class="scoreTable"><tr class="heading"><th rowspan="2">Player</th><th colspan="10">Frames</th></tr><tr>';
+    var scoreTableHtml = '<table class="scoreTable"><tr class="heading"><th rowspan="2">' + this._('PLAYER') + '</th><th colspan="10">' + this._('FRAMES') + '</th></tr><tr>';
     for ( var i = 0; i < 10; i++ ) {
       scoreTableHtml += '<th>' + (i+1).toString() + '</th>';
     }
@@ -222,14 +261,39 @@
     }
     scoreTableHtml += '</table>';
 
-    var menuHtml = '<div id="menu">Menu:<ul><li><button id="bowl-button">Bowl (Random)</button></li><li><button id="bowl-strike">Bowl Strike</button></li><li><button id="pause-button">Pause Game</button></li></ul></div>';
+    var menuHtml = '<div class="menu" id="menu">Menu:<ul><li><button id="bowl-button">' + this._('BOWL_NORMAL') + '</button></li><li><button id="bowl-strike">' + this._('BOWL_STRIKE') + '</button></li></ul></div>';
 
     var alleyHtml = '<div id="alley" class="alley"><div class="gutter top"></div><div class="lane"><div id="ball" class="ball static"></div><div class="pins">';
     for ( var i = 0; i < 10; i++ ) {
       alleyHtml += '<div id="pin_' + i.toString() + '" class="pin pin_' + i.toString() + '"></div>';
     }
     alleyHtml += '</div></div><div class="gutter bottom"></div></div>';
-    this.rootDiv.innerHTML = scoreTableHtml + menuHtml + alleyHtml;
+    this.rootDiv.innerHTML = scoreTableHtml + '<div id="below-score">' + menuHtml + alleyHtml + '</div>';
+  };
+  Renderer.prototype.renderEndScreen = function() {
+    // Get the highest score
+    var highScore = undefined;
+    for ( var i = 0; i < this.game.player.length; i++ ) {
+      if ( this.game.player[i].totalScore > highScore || highScore === undefined ) {
+        highScore = this.game.player[i].totalScore;
+      }
+    }
+    console.log(highScore);
+
+    // Now determine the winners
+    var winners = [];
+    for ( var i in this.game.player ) {
+      if ( this.game.player[i].totalScore === highScore ) {
+        winners.push(this.game.player[i].name);
+      }
+    }
+
+    var winnerMessageKey = winners.length > 1 ? 'WINNER_MESSAGE_TIE' : 'WINNER_MESSAGE';
+    var winnerText = winners.length > 1 ? winners.join(" " + this._('AND') + " ") : winners.pop();
+    console.log(winnerText);
+    console.log(winners);
+    var winnerHtml = '<div class="winner"><div class="message">' + this._(winnerMessageKey) + '<span class="winner_list">' + winnerText + '</span>' + this._('PLAY_AGAIN') + '</div><ul><li><button id="same-players">' + this._('SAME_PLAYERS') + '</button></li><li><button id="new-players">' + this._('NEW_PLAYERS') + '</button></li><li><button id="finished">' + this._('FINISHED') + '</button></li></ul>';
+    document.getElementById('below-score').innerHTML = winnerHtml;
   };
   Renderer.prototype.highlightBox = function() {
     var _this = this;
@@ -255,7 +319,7 @@
   };
   Renderer.prototype.startTurn = function() {
     this.highlightBox();
-    document.getElementById('bowl-strike').innerHTML = "Bowl Strike";
+    document.getElementById('bowl-strike').innerHTML = this._('BOWL_STRIKE');
   };
   Renderer.prototype.animateBall = function(callback) {
     var duration = 500;
@@ -295,8 +359,14 @@
   };
   Renderer.prototype.nextThrow = function() {
     this.resetBall();
-    document.getElementById('bowl-strike').innerHTML = "Bowl Spare";
+    document.getElementById('bowl-strike').innerHTML = this._('BOWL_SPARE');
     this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
+  };
+  Renderer.prototype.resetSamePlayers = function() {
+    this.game.beginGame();
+  };
+  Renderer.prototype.resetNewPlayers = function() {
+    this.game.startNewGame();
   };
 
 
@@ -323,7 +393,7 @@
     this.state = Bowl.PLAYER_SELECT;
     this.renderer.renderState();
   };
-  Bowl.prototype.resetGame = function() {
+  Bowl.prototype.setPlayers = function() {
     var _this = this;
     // Get the players from the form
     var position = 0;
@@ -341,6 +411,9 @@
     this.beginGame();
   };
   Bowl.prototype.beginGame = function() {
+    for ( var i = 0; i < this.player.length; i++ ) {
+      this.player[i].reset();
+    }
     this.currentFrame = 0;
     this.currentRoll = 0;
     this.currentPlayer = 0;

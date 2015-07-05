@@ -2,6 +2,7 @@
 <html>
   <head>
     <title>Javascript Bowling!</title>
+    <script type="text/javascript" src="js/dictionary.js"></script>
     <script type="text/javascript" src="js/core.js"></script>
     <script type="text/javascript">
     document.addEventListener('DOMContentLoaded', function(event) {
@@ -21,6 +22,9 @@
       content: "";
       display: table;
       clear: both;
+    }
+    ul li {
+      list-style: none;
     }
     .scoreTable {
       border: solid 1px #666;
@@ -66,6 +70,9 @@
       text-align: center;
       line-height: 35px;
       font-size: 22px;
+    }
+    .menu {
+      padding: 20px 0;
     }
     .alley {
       width: 700px;
@@ -161,6 +168,14 @@
     .alley .pin_9 {
       top: 90px;
       left: 60px;
+    }
+    .message {
+      padding: 20px 0;
+    }
+    .message .winner_list {
+      display: block;
+      padding: 20px;
+      font-size: 18px;
     }
     </style>
   </head>
