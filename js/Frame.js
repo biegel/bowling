@@ -78,7 +78,7 @@ Frame.prototype.calculateScore = function() {
   } else if ( this.frameStatus === Frame.STRIKE_EXTRA && this.roll[2] !== null ) {
     this.score = this.roll[1] + this.roll[2] + 10;
   } else if ( this.frameStatus === Frame.SPARE_EXTRA && this.roll[2] !== null ) {
-    this.score = this.roll[2] + 10 + this.roll[0] + this.roll[1];
+    this.score = this.roll[2] + 10;
   }
   return this.score;
 };
