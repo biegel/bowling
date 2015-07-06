@@ -241,6 +241,7 @@ Renderer.prototype.renderEndScreen = function() {
 
   var winnerMessageKey = winners.length > 1 ? 'WINNER_MESSAGE_TIE' : 'WINNER_MESSAGE';
   var winnerText = winners.length > 1 ? winners.join(" " + this._('AND') + " ") : winners.pop();
+  winnerText += ', ' + this._('POINT_TOTAL', {'N': highScore});
   var winnerHtml = '<div class="winner"><div class="message">' + this._(winnerMessageKey) + '<span class="winner_list">' + winnerText + '</span>' + this._('PLAY_AGAIN') + '</div><ul><li><button id="same-players">' + this._('SAME_PLAYERS') + '</button></li><li><button id="new-players">' + this._('NEW_PLAYERS') + '</button></li><li><button id="finished">' + this._('FINISHED') + '</button></li></ul>';
   document.getElementById('below-score').innerHTML = winnerHtml;
 };
@@ -275,7 +276,7 @@ Renderer.prototype.startTurn = function() {
 Renderer.prototype.resetPins = function() {
   this.pinStatus = [1,1,1,1,1,1,1,1,1,1];
   for ( var i = 0; i < this.pinStatus.length; i++ ) {
-    document.getElementById('pin_' + i).removeClass('knocked');
+    document.getElementById('pin_' + i).removeClass('knocked_0 knocked_1 knocked_2 knocked_3');
   }
   document.getElementById('bowl-strike').innerHTML = this._('BOWL_STRIKE');
 };
@@ -389,7 +390,8 @@ Renderer.prototype.knockPins = function() {
   }
   for ( var i in this.pinStatus ) {
     if ( this.pinStatus[i] === 0 ) {
-      document.getElementById('pin_' + i).addClass('knocked');
+      var direction = Math.floor(Math.random() * 4);
+      document.getElementById('pin_' + i).addClass('knocked_' + direction);
     }
   }
 };

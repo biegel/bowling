@@ -1,7 +1,10 @@
 // Let's augment some native javascript classes with some useful methods
 Element.prototype.addClass = function(newClass) {
+  var newClasses = newClass.split(" ");
   var classes = this.className.split(" "), comp = {}, reduced = [];
-  classes.push(newClass);
+  for ( var i in newClasses ) {
+    classes.push(newClasses[i]);
+  }
   for ( var i in classes ) {
     if ( comp[classes[i]] === undefined ) {
       comp[classes[i]] = true;
@@ -12,9 +15,16 @@ Element.prototype.addClass = function(newClass) {
   return this;
 };
 Element.prototype.removeClass = function(oldClass) {
-  var classes = this.className.split(" "), reduced = [];
+  var oldClasses = oldClass.split(" ");
+  var classes = this.className.split(" "), reduced = [], found = false;
   for ( var i in classes ) {
-    if ( classes[i] !== oldClass ) {
+    found = false;
+    for ( var j in oldClasses ) {
+      if ( classes[i] === oldClasses[j] ) {
+        found = true;
+      }
+    }
+    if ( !found ) {
       reduced.push(classes[i]);
     }
   }

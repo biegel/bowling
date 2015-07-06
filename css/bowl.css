@@ -125,11 +125,25 @@ button {
   background-color: #fff;
   position: absolute;
 }
-.alley .pin.knocked {
-  transition-property: left;
-  transition-timing-function: linear;
-  transition-duration: 0.5s;
-  left: 600px;
+.alley .pin.knocked_0 {
+  transition: left 0.25s linear, top 0.25s linear;
+  top: -30px;
+  left: 120px;
+}
+.alley .pin.knocked_1 {
+  transition: left 0.25s linear, top 0.25s linear;
+  top: 30px;
+  left: 120px;
+}
+.alley .pin.knocked_2 {
+  transition: left 0.25s linear, top 0.25s linear;
+  top: 90px;
+  left: 120px;
+}
+.alley .pin.knocked_3 {
+  transition: left 0.25s linear, top 0.25s linear;
+  top: 150px;
+  left: 120px;
 }
 .alley .pins {
   position: absolute;
