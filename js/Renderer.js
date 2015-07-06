@@ -167,7 +167,7 @@ Renderer.prototype.checkEventListeners = function() {
         !_this.busy && _this.game.determinePins() && _this.throwBall();
       });
       document.getElementById('bowl-strike').addEventListener('click', function(event) {
-        !_this.busy && _this.game.determinePins(Frame.STRIKE) && _this.throwStrike();
+        !_this.busy && _this.game.determinePins(Frame.STRIKE) && _this.throwBall();
       });
       break;
     case Bowl.GAME_OVER:
@@ -336,14 +336,6 @@ Renderer.prototype.recordScore = function(pins) {
   }
 };
 Renderer.prototype.throwBall = function() {
-  var _this = this;
-  var callback = function() {
-    _this.busy = false;
-    _this.game.pinStrike();
-  };
-  this.animateBall(callback);
-};
-Renderer.prototype.throwStrike = function() {
   var _this = this;
   var callback = function() {
     _this.busy = false;
